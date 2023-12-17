@@ -41,7 +41,7 @@ async fn main_service(
         }
     };
 
-    if let Some(x) = host.find(":") {
+    if let Some(x) = host.find(':') {
         host = host[..x].to_string();
     }
 
@@ -54,7 +54,7 @@ async fn main_service(
     let rebound_host = bindings.get(&host).unwrap();
 
     let mut new_headers = request.headers().clone();
-    let new_host_value = match HeaderValue::from_str(&rebound_host) {
+    let new_host_value = match HeaderValue::from_str(rebound_host) {
         Ok(e) => e,
         Err(_) => {
             send_and_log!(format!(
@@ -123,7 +123,7 @@ async fn main_service(
         Ok(e) => e,
     };
 
-    let real_status = real_result.status().clone();
+    let real_status = real_result.status();
     let real_headers = real_result.headers().clone();
 
     let out_frame_stream = real_result.into_body().map_frame(|frame| {

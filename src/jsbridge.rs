@@ -87,7 +87,7 @@ impl JSBridge {
 
         this.context
             .add_callback("badns_log", |x: String| -> i32 {
-                x.split("\n").for_each(|x| println!("[JS]: {}", x));
+                x.split('\n').for_each(|x| println!("[JS]: {}", x));
                 0
             })
             .unwrap();
@@ -146,8 +146,8 @@ impl JSBridge {
     pub fn get_response(
         &mut self,
         message: &Question,
-        addr: &String,
-        bind_addr: &String,
+        addr: &str,
+        bind_addr: &str,
     ) -> Vec<Record> {
         let args: Vec<JsValue> = vec![
             JsValue::String({
@@ -157,8 +157,8 @@ impl JSBridge {
             }),
             JsValue::Int(message.r#type as i32),
             JsValue::Int(message.class as i32),
-            JsValue::String(addr.clone()),
-            JsValue::String(bind_addr.clone()),
+            JsValue::String(addr.to_owned()),
+            JsValue::String(bind_addr.to_owned()),
         ];
         let json = match self.context.call_function("badns_getResponse", args) {
             Ok(JsValue::String(str)) => match serde_json::from_str(&str) {

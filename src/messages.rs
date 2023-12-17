@@ -7,6 +7,6 @@ pub const RR_AAAA: u16 = 28;
 pub const RR_SRV: u16 = 33;
 
 pub const SUPPORTED_RR: [u16; 7] = [RR_A, RR_CNAME, RR_SOA, RR_PTR, RR_TXT, RR_AAAA, RR_SRV];
-pub const SUPPORTED_RR_NAMES: [&'static str; 7] = [
+pub const SUPPORTED_RR_NAMES: [&str; 7] = [
     "RR_A", "RR_CNAME", "RR_SOA", "RR_PTR", "RR_TXT", "RR_AAAA", "RR_SRV",
 ];

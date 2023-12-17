@@ -4,13 +4,12 @@ mod messages;
 mod server;
 mod ttldict;
 
-use std::{collections::HashMap, env, fs::File, io::Read, path::Path, thread};
+use std::{collections::HashMap, env, fs::File, io::Read, path::Path, thread, rc::Rc};
 
 use http::run_http_server;
 use jsbridge::{Address, JSBridge};
 use quick_js::JsValue;
 use server::run_server;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
 fn read_file(file_name: String) -> String {
@@ -42,7 +41,7 @@ async fn main() {
     }
     let config_file = &args[1];
 
-    let bridge = Arc::new(Mutex::new(JSBridge::new()));
+    let bridge = Rc::new(Mutex::new(JSBridge::new()));
     let mut addresses = Vec::new();
 
     let http_host: String;

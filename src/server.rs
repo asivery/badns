@@ -4,8 +4,9 @@ use rustdns::Question;
 use rustdns::Record;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 use std::time::SystemTime;
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tokio::sync::Mutex;
 use tokio::sync::OnceCell;
@@ -41,7 +42,8 @@ async fn query_upstream(question: &Question, bridge: &JSBridge) -> Vec<Record> {
     };
 
     let timeout_duration = Duration::from_secs(5);
-    for upstream in bridge.upstreams.lock().unwrap().iter() {
+    let upstreams_clone = bridge.upstreams.lock().unwrap().clone();
+    for upstream in upstreams_clone {
         let canonical = upstream.to_canonical();
         println!(
             "[Upstream] Querying upstream {} for domain {}",
@@ -90,14 +92,14 @@ async fn query_upstream(question: &Question, bridge: &JSBridge) -> Vec<Record> {
                 continue;
             }
         };
-        if answer.answers.len() > 0 {
+        if !answer.answers.is_empty() {
             return answer.answers.clone();
         }
     }
     if message.answers.is_empty() {
         println!("[Upstream]: Upstream had no results for {}", question.name);
     }
-    return Vec::default();
+    Vec::default()
 }
 
 fn hash_question(question: &Question) -> u64 {
@@ -111,7 +113,7 @@ fn hash_question(question: &Question) -> u64 {
 async fn handle_packet(
     buffer: &[u8],
     peer: &SocketAddr,
-    bridge: &Arc<Mutex<JSBridge>>,
+    bridge: &Rc<Mutex<JSBridge>>,
     socket: &UdpSocket,
 ) {
     let mut cache = CACHE
@@ -138,7 +140,7 @@ async fn handle_packet(
     outbound_response.opcode = Opcode::Query;
     outbound_response.answers = Vec::new();
     for question in &message.questions {
-        let hashed_question = hash_question(&question);
+        let hashed_question = hash_question(question);
         println!(
             "[DNS]: Incoming query for {} from {}",
             question.name, peer_address
@@ -157,7 +159,7 @@ async fn handle_packet(
             }
             outbound_response.answers.extend(answers);
         } else {
-            let mut answers = instance.get_response(question, &peer_address, &own_address);
+            let mut answers = instance.get_response(question, &peer_address, own_address);
             if answers.is_empty() {
                 answers = query_upstream(question, &instance).await;
             }
@@ -190,19 +192,16 @@ async fn handle_packet(
     let as_bytes = match outbound_response.to_vec() {
         Ok(e) => e,
         Err(err) => {
-            println!("[DNS]: Malformed internal data ({})", err.to_string());
+            println!("[DNS]: Malformed internal data ({})", err);
             return;
         }
     };
-    match socket.send_to(&as_bytes, peer).await {
-        Err(_) => {
-            println!("[DNS]: Failed sending response to {}", peer_address);
-        }
-        _ => (),
+    if socket.send_to(&as_bytes, peer).await.is_err() {        
+        println!("[DNS]: Failed sending response to {}", peer_address);
     }
 }
 
-pub async fn run_server(address: Address, bridge: Arc<Mutex<JSBridge>>) {
+pub async fn run_server(address: Address, bridge: Rc<Mutex<JSBridge>>) {
     let full_address = address.to_canonical();
     let socket = match UdpSocket::bind(&full_address).await {
         Ok(socket) => socket,
