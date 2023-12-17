@@ -1,3 +1,5 @@
+use rustdns::Opcode;
+use rustdns::QR;
 use rustdns::Question;
 use rustdns::Record;
 use std::collections::hash_map::DefaultHasher;
@@ -132,6 +134,8 @@ async fn handle_packet(
     let mut instance = bridge.lock().await;
 
     let mut outbound_response = message.clone();
+    outbound_response.qr = QR::Response;
+    outbound_response.opcode = Opcode::Query;
     outbound_response.answers = Vec::new();
     for question in &message.questions {
         let hashed_question = hash_question(&question);
