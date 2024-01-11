@@ -22,6 +22,7 @@ static OUTBOUND: OnceCell<UdpSocket> = OnceCell::const_new();
 
 struct CacheEntry {
     entry: Vec<Record>,
+    authoritative: bool,
     init_time: SystemTime,
 }
 
@@ -157,9 +158,14 @@ async fn handle_packet(
             for ans in &mut answers {
                 ans.ttl -= ttl_offset;
             }
+            outbound_response.aa = cached_entry.authoritative;
             outbound_response.answers.extend(answers);
         } else {
-            let mut answers = instance.get_response(question, &peer_address, own_address);
+            let js_answer = instance.get_response(question, &peer_address, own_address);
+            let mut answers = js_answer.records;
+
+            outbound_response.aa = js_answer.authoritative;
+
             if answers.is_empty() {
                 answers = query_upstream(question, &instance).await;
             }
@@ -179,6 +185,7 @@ async fn handle_packet(
                     hashed_question,
                     CacheEntry {
                         entry: answers.clone(),
+                        authoritative: js_answer.authoritative,
                         init_time: SystemTime::now(),
                     },
                     min_ttl,

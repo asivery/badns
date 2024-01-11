@@ -1,4 +1,4 @@
-const log = (...e) => badns_log(e.join("\n"));
+const log = (...e) => badns_log(e.map(q => q === undefined ? '<undefined>' : q === null ? '<null>' : q.toString()).join("\n"));
 const console = { log };
 
 function bindAddress(address, port){
@@ -151,15 +151,19 @@ function STUB(){
 }
 
 function permanentBinding(ip, domain){
-    addABinding(domain, {
+    addABinding(domain, () => ({
         "type": "A",
         "ttl": 99999999,
         ip
-    });
+    }));
 }
 
 function ban(target){
     addABinding(target, STUB);
+}
+
+function exec(fname){
+    eval(readFile(fname));
 }
 
 /*
@@ -177,4 +181,7 @@ For CNAME bindings:
     type: 'CNAME',
     'target': FQDN,
 }
+
+All responses can have the following values:
+- authoritative
 */

@@ -18,9 +18,23 @@ pub struct Address {
     pub port: u16,
 }
 
+pub struct JSResponse {
+    pub records: Vec<Record>,
+    pub authoritative: bool,
+}
+
 impl Address {
     pub fn to_canonical(&self) -> String {
         format!("{}:{}", self.address, self.port)
+    }
+}
+
+impl JSResponse {
+    pub fn new(records: Vec<Record>) -> JSResponse {
+        JSResponse {
+            records,
+            authoritative: false,
+        }
     }
 }
 
@@ -148,7 +162,7 @@ impl JSBridge {
         message: &Question,
         addr: &str,
         bind_addr: &str,
-    ) -> Vec<Record> {
+    ) -> JSResponse {
         let args: Vec<JsValue> = vec![
             JsValue::String({
                 let mut name = message.name.chars();
@@ -173,17 +187,18 @@ impl JSBridge {
             },
             Err(e) => {
                 println!("[JS]: Failed to run function! ({})", e);
-                return Vec::default();
+                return JSResponse::new(Vec::default());
             }
             _ => Value::Null,
         };
 
         if !json.is_array() {
             println!("[JS->RS]: Received value is not an array!");
-            return Vec::default();
+            return JSResponse::new(Vec::default());
         }
 
         let mut out: Vec<Record> = Vec::default();
+        let mut authoritative = false;
 
         for resp in json.as_array().unwrap() {
             let name = match &resp["name"] {
@@ -208,6 +223,11 @@ impl JSBridge {
                     None
                 }
             };
+            if let Some(js_authoritative) = resp["authoritative"].as_bool() {
+                if js_authoritative {
+                    authoritative = true;
+                }
+            }
 
             if let Some(resource) = resource {
                 out.push(Record {
@@ -219,6 +239,9 @@ impl JSBridge {
             }
         }
 
-        out
+        JSResponse {
+            authoritative,
+            records: out
+        }
     }
 }

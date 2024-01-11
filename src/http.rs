@@ -45,6 +45,10 @@ async fn main_service(
         host = host[..x].to_string();
     }
 
+    if host == "balls" {
+        return Ok(Response::new(full(":3")));
+    }
+
     if !bindings.contains_key(&host) {
         send_and_log!(format!(
             "Peer {} queried a non-bound host {}",
@@ -66,10 +70,6 @@ async fn main_service(
     new_headers.insert("Host", new_host_value);
 
     let uri = request.uri().clone();
-
-    if host == "balls" {
-        return Ok(Response::new(full(":3")));
-    }
 
     let stream = match TcpStream::connect(rebound_host).await {
         Err(_) => {

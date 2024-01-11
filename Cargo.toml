@@ -13,3 +13,4 @@ hyper = { version = "1", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 rustdns = { path = "../rustdns" }
+sha256 = "1.5.0"
