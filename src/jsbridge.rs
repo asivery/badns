@@ -1,5 +1,5 @@
 use quick_js::{Callback, Context, JsValue};
-use rustdns::{Question, Record, Resource};
+use rustdns::{Question, Record, Resource, Class, Type};
 use serde_json::Value;
 use std::fs::File;
 use std::io::prelude::*;
@@ -9,8 +9,10 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+use num_traits::cast::FromPrimitive;
 
 use crate::messages::{SUPPORTED_RR, SUPPORTED_RR_NAMES};
+use crate::server::query_upstream;
 
 #[derive(Debug, Clone)]
 pub struct Address {
@@ -30,9 +32,9 @@ impl Address {
 }
 
 impl JSResponse {
-    pub fn new(records: Vec<Record>) -> JSResponse {
+    pub fn default() -> JSResponse {
         JSResponse {
-            records,
+            records: Vec::default(),
             authoritative: false,
         }
     }
@@ -128,8 +130,8 @@ impl JSBridge {
         this
     }
 
-    pub fn mark_http_as_frozen(&mut self){
-        self.context.set_global("badns_httpFrozen", true).unwrap();
+    pub fn mark_http_as_frozen(&mut self) {
+        self.context.set_global("badns_afterInit", true).unwrap();
     }
 
     pub fn add_extension<F>(&mut self, name: &str, callback: impl Callback<F> + 'static) {
@@ -157,7 +159,39 @@ impl JSBridge {
         self.context.eval(data).unwrap()
     }
 
-    pub fn get_response(
+    async fn response_handle_special(&self, special_value: &Value, response: &mut JSResponse){
+        match special_value["specialType"].as_str(){
+            Some("queryUpstream") => {
+                macro_rules! type_fail {
+                    () => {
+                        {
+                            println!("[JS->RS]: Type conversion error!");
+                            return;
+                        }
+                    };
+                }
+
+                let name = match special_value["name"].as_str() {
+                    Some(x) => String::from(x),
+                    None => type_fail!(),
+                };
+                let r#type: Type = match special_value["rrtype"].as_i64() {
+                    Some(x) => Type::from_i32(x as i32).unwrap(),
+                    None => type_fail!(),
+                };
+                let class: Class = match special_value["rrclass"].as_i64() {
+                    Some(x) => Class::from_i32(x as i32).unwrap(),
+                    None => type_fail!(),
+                };
+                let upstream_response = query_upstream(&Question { name, r#type, class }, self).await;
+                response.records.extend(upstream_response);
+            }
+            Some(x) => println!("[JS->RS]: Invalid special value type {}!", x),
+            None => println!("[JS->RS]: Invalid special value type - not a string!"),
+        }
+    }
+
+    pub async fn get_response(
         &mut self,
         message: &Question,
         addr: &str,
@@ -187,20 +221,24 @@ impl JSBridge {
             },
             Err(e) => {
                 println!("[JS]: Failed to run function! ({})", e);
-                return JSResponse::new(Vec::default());
+                return JSResponse::default();
             }
             _ => Value::Null,
         };
 
         if !json.is_array() {
             println!("[JS->RS]: Received value is not an array!");
-            return JSResponse::new(Vec::default());
+            return JSResponse::default();
         }
 
-        let mut out: Vec<Record> = Vec::default();
-        let mut authoritative = false;
+        let mut response = JSResponse::default();
 
         for resp in json.as_array().unwrap() {
+            if resp["special"].as_bool() == Some(true) {
+                // This is a special marker for the rust code.
+                self.response_handle_special(resp, &mut response).await;
+                continue;
+            }
             let name = match &resp["name"] {
                 Value::String(e) => e,
                 _ => &message.name,
@@ -223,14 +261,12 @@ impl JSBridge {
                     None
                 }
             };
-            if let Some(js_authoritative) = resp["authoritative"].as_bool() {
-                if js_authoritative {
-                    authoritative = true;
-                }
+            if resp["authoritative"].as_bool() == Some(true) {
+                response.authoritative = true;
             }
 
             if let Some(resource) = resource {
-                out.push(Record {
+                response.records.push(Record {
                     name,
                     class,
                     ttl,
@@ -239,9 +275,6 @@ impl JSBridge {
             }
         }
 
-        JSResponse {
-            authoritative,
-            records: out
-        }
+        response
     }
 }

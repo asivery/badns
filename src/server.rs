@@ -28,7 +28,7 @@ struct CacheEntry {
 
 static CACHE: OnceCell<Mutex<TTLDict<u64, CacheEntry>>> = OnceCell::const_new();
 
-async fn query_upstream(question: &Question, bridge: &JSBridge) -> Vec<Record> {
+pub async fn query_upstream(question: &Question, bridge: &JSBridge) -> Vec<Record> {
     let outbound = OUTBOUND
         .get_or_init(|| async { UdpSocket::bind("0.0.0.0:0").await.unwrap() })
         .await;
@@ -161,7 +161,7 @@ async fn handle_packet(
             outbound_response.aa = cached_entry.authoritative;
             outbound_response.answers.extend(answers);
         } else {
-            let js_answer = instance.get_response(question, &peer_address, own_address);
+            let js_answer = instance.get_response(question, &peer_address, own_address).await;
             let mut answers = js_answer.records;
 
             outbound_response.aa = js_answer.authoritative;

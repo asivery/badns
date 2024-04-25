@@ -13,10 +13,6 @@ use server::run_server;
 use tokio::sync::Mutex;
 use sha256::digest;
 
-fn sha256_digest(data: String) -> String {
-    digest(data)
-}
-
 fn read_file(file_name: String) -> String {
     let mut str = String::new();
     let mut file = match File::open(Path::new(&file_name)) {
@@ -56,7 +52,7 @@ async fn main() {
     {
         let mut initial_reference = bridge.lock().await;
         initial_reference.add_extension("readFile", read_file);
-        initial_reference.add_extension("sha256", sha256_digest);
+        initial_reference.add_extension("sha256", |x: String| digest(x));
         initial_reference.evaulate_file(config_file);
         addresses.clone_from(&initial_reference.bound_addresses.lock().unwrap());
         http_host = initial_reference
