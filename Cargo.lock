@@ -74,12 +74,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "badns-rs"
+name = "badns"
 version = "0.1.0"
 dependencies = [
  "http-body-util",
  "hyper 1.0.1",
  "hyper-util",
+ "num-traits",
  "quick-js",
  "rustdns",
  "serde_json",

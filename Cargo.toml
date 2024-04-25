@@ -1,5 +1,5 @@
 [package]
-name = "badns-rs"
+name = "badns"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,3 +14,4 @@ tokio = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 rustdns = { path = "../rustdns" }
 sha256 = "1.5.0"
+num-traits = "0.2.17"
