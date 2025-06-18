@@ -1,12 +1,12 @@
 use rustdns::Opcode;
-use rustdns::QR;
 use rustdns::Question;
 use rustdns::Record;
+use rustdns::QR;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::net::SocketAddr;
 use std::rc::Rc;
 use std::time::SystemTime;
-use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tokio::sync::Mutex;
 use tokio::sync::OnceCell;
@@ -161,7 +161,9 @@ async fn handle_packet(
             outbound_response.aa = cached_entry.authoritative;
             outbound_response.answers.extend(answers);
         } else {
-            let js_answer = instance.get_response(question, &peer_address, own_address).await;
+            let js_answer = instance
+                .get_response(question, &peer_address, own_address)
+                .await;
             let mut answers = js_answer.records;
 
             outbound_response.aa = js_answer.authoritative;
@@ -203,7 +205,7 @@ async fn handle_packet(
             return;
         }
     };
-    if socket.send_to(&as_bytes, peer).await.is_err() {        
+    if socket.send_to(&as_bytes, peer).await.is_err() {
         println!("[DNS]: Failed sending response to {}", peer_address);
     }
 }

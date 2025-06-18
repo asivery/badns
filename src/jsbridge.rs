@@ -1,5 +1,6 @@
+use num_traits::cast::FromPrimitive;
 use quick_js::{Callback, Context, JsValue};
-use rustdns::{Question, Record, Resource, Class, Type};
+use rustdns::{Class, Question, Record, Resource, Type};
 use serde_json::Value;
 use std::fs::File;
 use std::io::prelude::*;
@@ -9,7 +10,6 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use num_traits::cast::FromPrimitive;
 
 use crate::messages::{SUPPORTED_RR, SUPPORTED_RR_NAMES};
 use crate::server::query_upstream;
@@ -159,16 +159,14 @@ impl JSBridge {
         self.context.eval(data).unwrap()
     }
 
-    async fn response_handle_special(&self, special_value: &Value, response: &mut JSResponse){
-        match special_value["specialType"].as_str(){
+    async fn response_handle_special(&self, special_value: &Value, response: &mut JSResponse) {
+        match special_value["specialType"].as_str() {
             Some("queryUpstream") => {
                 macro_rules! type_fail {
-                    () => {
-                        {
-                            println!("[JS->RS]: Type conversion error!");
-                            return;
-                        }
-                    };
+                    () => {{
+                        println!("[JS->RS]: Type conversion error!");
+                        return;
+                    }};
                 }
 
                 let name = match special_value["name"].as_str() {
@@ -183,7 +181,15 @@ impl JSBridge {
                     Some(x) => Class::from_i32(x as i32).unwrap(),
                     None => type_fail!(),
                 };
-                let upstream_response = query_upstream(&Question { name, r#type, class }, self).await;
+                let upstream_response = query_upstream(
+                    &Question {
+                        name,
+                        r#type,
+                        class,
+                    },
+                    self,
+                )
+                .await;
                 response.records.extend(upstream_response);
             }
             Some(x) => println!("[JS->RS]: Invalid special value type {}!", x),

@@ -4,14 +4,14 @@ mod messages;
 mod server;
 mod ttldict;
 
-use std::{collections::HashMap, env, fs::File, io::Read, path::Path, thread, rc::Rc};
+use std::{collections::HashMap, env, fs::File, io::Read, path::Path, rc::Rc, thread};
 
 use http::run_http_server;
 use jsbridge::{Address, JSBridge};
 use quick_js::JsValue;
 use server::run_server;
-use tokio::sync::Mutex;
 use sha256::digest;
+use tokio::sync::Mutex;
 
 fn read_file(file_name: String) -> String {
     let mut str = String::new();
@@ -76,8 +76,9 @@ async fn main() {
                     address: http_host,
                     port: http_port,
                 },
-                http_bindings
-            ).unwrap();
+                http_bindings,
+            )
+            .unwrap();
         });
     }
 

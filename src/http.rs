@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use std::convert::Infallible;
 use std::net::{SocketAddr, SocketAddrV4};
@@ -43,10 +43,6 @@ async fn main_service(
 
     if let Some(x) = host.find(':') {
         host = host[..x].to_string();
-    }
-
-    if host == "balls" {
-        return Ok(Response::new(full(":3")));
     }
 
     if !bindings.contains_key(&host) {
