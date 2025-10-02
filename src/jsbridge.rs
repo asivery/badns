@@ -125,7 +125,7 @@ impl JSBridge {
         this.context.set_global("RRs", rrs).unwrap();
         this.context.set_global("RRrevs", reverse_rrs).unwrap();
 
-        this.evaulate_file("init.js");
+        this.eval(include_str!("init.js"));
 
         this
     }
