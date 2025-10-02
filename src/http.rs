@@ -134,9 +134,7 @@ async fn main_service(
 
     let mut final_result = Response::new(out_frame_stream.boxed());
     *final_result.status_mut() = real_status;
-    for (key, val) in real_headers.iter() {
-        final_result.headers_mut().insert(key, val.clone());
-    }
+    *final_result.headers_mut() = real_headers;
 
     Ok(final_result)
 }
