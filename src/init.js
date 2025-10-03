@@ -154,6 +154,10 @@ function addHTTPRedirect(target, name){
         log("A HTTP redirection is being added, but HTTP redirect service isn't configured!");
     }
 
+    // Assert target is a URL:
+    if(!target.startsWith("http://") && !target.startsWith("https://")) {
+        throw Error("The first parameter must be the target's URL!");
+    }
     badns_setHTTPRedirect(name, target);
     addABinding(name, () => ({ type: "A", ttl: 100, ip: badns_httpRedirectRecordTarget }));
 }

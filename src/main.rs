@@ -78,7 +78,6 @@ async fn main() {
                 },
                 http_bindings,
             )
-            .unwrap();
         });
     }
 
